@@ -1,0 +1,3 @@
+data-collector/.env
+__pycache__/
+.venv/
