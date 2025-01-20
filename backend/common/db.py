@@ -2,7 +2,7 @@ import psycopg2
 from contextlib import contextmanager
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from models.model import Base
+from common.models.model import Base
 from common.environment import get_db_credentials
 
 

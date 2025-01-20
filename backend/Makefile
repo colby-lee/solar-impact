@@ -1,11 +1,22 @@
+# Define the virtual environment and common paths
 export PYTHONPATH := $(CURDIR)
+VENV_DIR := .venv
+PYTHON := $(VENV_DIR)/bin/python
+PIP := $(VENV_DIR)/bin/pip
 
-install:
-	pip install -r requirements.txt
+# Ensure the virtual environment exists
+$(VENV_DIR):
+	python3 -m venv $(VENV_DIR)
 
-run-data-collector:
-	cd $(CURDIR) && python -m data_collector.collect
+# Install dependencies
+install: $(VENV_DIR)
+	$(PIP) install --upgrade pip
+	$(PIP) install -r requirements.txt
 
+# Run the data collector
+run-data-collector: $(VENV_DIR)
+	$(PYTHON) -m data_collector.collect
 
-
-# Run other shared commands here
+# Run the FastAPI server
+run-server: $(VENV_DIR)
+	$(PYTHON) -m uvicorn api.main:app --reload
