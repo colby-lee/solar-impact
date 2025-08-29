@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 # Load environment variables only once
 load_dotenv()
 
+print("Environment variables loaded:", os.environ)
+
 
 def get_env_var(key: str, default=None) -> str:
     """

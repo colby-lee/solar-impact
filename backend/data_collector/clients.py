@@ -3,7 +3,6 @@ import requests
 from datetime import datetime
 from typing import Any, Dict, List, Union
 
-# Importing environment variables, database utilities, and models
 from common import environment as env
 from common import db
 from common.utils import parse_time
@@ -21,9 +20,9 @@ class Client:
         Handles common HTTP errors gracefully.
         """
         try:
-            response = requests.get(url, params=params)  # Pass parameters for dynamic queries
-            response.raise_for_status()  # Raise HTTP errors if any
-            return response.json()  # Return the JSON response
+            response = requests.get(url, params=params)  
+            response.raise_for_status()  
+            return response.json()  
         except requests.exceptions.Timeout:
             print("Error: Request timed out.")
         except requests.exceptions.ConnectionError:
@@ -54,7 +53,6 @@ class NASAClient(Client):
         Fetch solar flare data from NASA API.
         Allows filtering by optional start and end dates.
         """
-        # Construct query parameters dynamically
         params = {"api_key": self.API_KEY}
         if start_date:
             params["startDate"] = start_date
@@ -63,6 +61,9 @@ class NASAClient(Client):
 
         # Fetch data using the inherited method
         try:
+            print('-------------------------------------')
+            print(f'{self.get_data(self.url, params=params)}')
+            print('-------------------------------------')
             return self.get_data(self.url, params=params)
         except Exception as e:
             print(f"Error fetching solar flare data: {e}")
@@ -71,13 +72,14 @@ class NASAClient(Client):
     @staticmethod
     def extract_flr_id(payload_flr_id: str) -> Union[str, None]:
         """
-        Extracts the FLR-001-like identifier from a given flrID string using regex.
+        Extracts the full unique flare identifier from a given flrID string using regex.
+        For example, from "2025-01-21T10:08:00-FLR-001" it extracts the entire string.
         :param payload_flr_id: Raw flrID from the API payload.
-        :return: Extracted FLR identifier or None if not matched.
+        :return: Extracted unique identifier or None if not matched.
         """
-        match = re.search(r'([A-Z]+-\d+)', payload_flr_id)
+        match = re.search(r'(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?-FLR-\d+)', payload_flr_id)
         if match:
-            return match.group(1)  # Return the matched identifier
+            return match.group(1)
         print(f"Regex did not match for payload: {payload_flr_id}")
         return None
 
@@ -90,7 +92,6 @@ class NASAClient(Client):
         :return: A `SolarFlare` model instance, or None if mapping fails.
         """
         try:
-            # Extract and transform fields from the payload
             flr_id_raw = payload.get("flrID", "")
             flr_id = NASAClient.extract_flr_id(flr_id_raw)  # Extract unique identifier
             return SolarFlare(
@@ -101,7 +102,7 @@ class NASAClient(Client):
                 class_type=payload.get("classType", ""),
                 source_location=payload.get("sourceLocation", ""),
                 active_region_num=payload.get("activeRegionNum"),
-                linked_events=payload.get("linkedEvents"),  # Retain JSON structure
+                linked_events=payload.get("linkedEvents"),  
             )
         except KeyError as e:
             print(f"Missing expected field in payload: {e}")
@@ -126,21 +127,29 @@ class NASAClient(Client):
                 processed_flares.append(solar_flare)
         return processed_flares
 
-    def fetch_and_insert_solar_flares(self):
+    def fetch_and_insert_solar_flares(self, start_date: str = None, end_date: str = None):
         """
         Fetch solar flare data from NASA API and insert them into the database.
-        Ensures no duplicate entries are added.
+        Allows optional filtering by start and end dates.
         """
-        # Fetch raw data from the API
-        solar_flare_data = self.fetch_flare_data()
+        print('-------------------------------------')
+        print(f"Fetching solar flare data for date range: {start_date} to {end_date}")
+        print('-------------------------------------')
+        solar_flare_data = self.fetch_flare_data(start_date=start_date, end_date=end_date)
+        
+        # Process raw data into SolarFlare instances
         if not isinstance(solar_flare_data, list):  # Validate response format
             print("Invalid API response format.")
             return
 
-        # Process raw data into SolarFlare instances
         solar_flares = self.process_solar_flares(solar_flare_data)
+
+        #Set of ids already inserted to reduce db inserts
+        inserted_flr_ids = set()
+
         with db.DatabaseManager.session_scope() as session:
             for solar_flare in solar_flares:
-                # Check for duplicates before inserting
-                if not session.query(SolarFlare).filter_by(flr_id=solar_flare.flr_id).first():
-                    session.add(solar_flare)  # Add only unique entries
+                if solar_flare.flr_id not in inserted_flr_ids: 
+                    if not session.query(SolarFlare).filter_by(flr_id=solar_flare.flr_id).first():
+                        session.add(solar_flare)  # Add only unique entries
+                        inserted_flr_ids.add(solar_flare.flr_id)

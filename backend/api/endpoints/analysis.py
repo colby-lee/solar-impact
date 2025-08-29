@@ -1,7 +1,10 @@
-from fastapi import APIRouter, HTTPException, Query
 from typing import Union, Optional, Dict
 from collections import Counter
+
+from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException
 from sqlalchemy.orm import Session
+
 from common.db import DatabaseManager
 from common.models.model import SolarFlare
 
@@ -12,9 +15,6 @@ router = APIRouter()
 def get_peak_frequency(start_date: str, end_date: str):
     """
     Analyze solar flares to find the most common class within a date range.
-    """
-    """
-    Analyze peak frequencies of solar flares in a given date range.
     """
     with DatabaseManager.session_scope() as session:
         solar_flares = (
@@ -35,7 +35,7 @@ def get_peak_frequency(start_date: str, end_date: str):
         # Find the most common class
         most_common_class = max(frequencies, key=frequencies.get) if frequencies else None
 
-        # Prepare a JSON-compatible response
+        # Prepare response
         response = {
             "start_date": start_date,
             "end_date": end_date,
