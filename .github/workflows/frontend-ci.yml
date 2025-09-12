@@ -1,0 +1,38 @@
+# .github/workflows/frontend-ci.yml
+name: Frontend CI
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend-ci.yml"
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend-ci.yml"
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend/solar-impact-frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+          cache-dependency-path: frontend/solar-impact-frontend/package-lock.json
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Build (ensures the app compiles)
+        run: npm run build
+
