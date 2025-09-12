@@ -19,4 +19,13 @@ run-data-collector: $(VENV_DIR)
 
 # Run the FastAPI server
 run-server: $(VENV_DIR)
+	echo "PYTHONPATH: $(PYTHONPATH)"  
 	$(PYTHON) -m uvicorn api.main:app --reload
+
+# Run unit tests
+run-tests: 
+	$(VENV_DIR)/bin/pytest -v
+
+# Run api tests
+run-api-tests:
+	(VENV_DIR)/bin/pytest api/tests -v

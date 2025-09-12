@@ -9,6 +9,18 @@ from common.utils import parse_time
 from common.models.model import SolarFlare
 
 
+def _to_ymd(s: str | None) -> str | None:
+    if not s:
+        return None
+    s2 = s[:-1] if s.endswith('Z') else s
+    try:
+        return datetime.fromisoformat(s2).strftime("%Y-%m-%d")
+    except Exception:
+        # accept already YYYY-MM-DD-ish
+        if len(s) >= 10 and s[4] == '-' and s[7] == '-':
+            return s[:10]
+        return None
+
 class Client:
     """
     Base class for API clients.
@@ -54,17 +66,18 @@ class NASAClient(Client):
         Allows filtering by optional start and end dates.
         """
         params = {"api_key": self.API_KEY}
-        if start_date:
-            params["startDate"] = start_date
-        if end_date:
-            params["endDate"] = end_date
+        sd, ed = _to_ymd(start_date), _to_ymd(end_date)
+        if sd: params["startDate"] = sd
+        if ed: params["endDate"] = ed
 
         # Fetch data using the inherited method
         try:
             print('-------------------------------------')
-            print(f'{self.get_data(self.url, params=params)}')
+            print(f"[NASA] params={params}")
+            data = self.get_data(self.url, params=params) or []
+            print(f"[NASA] returned count={len(data)}")
             print('-------------------------------------')
-            return self.get_data(self.url, params=params)
+            return data
         except Exception as e:
             print(f"Error fetching solar flare data: {e}")
             return []
@@ -93,7 +106,10 @@ class NASAClient(Client):
         """
         try:
             flr_id_raw = payload.get("flrID", "")
-            flr_id = NASAClient.extract_flr_id(flr_id_raw)  # Extract unique identifier
+            flr_id = NASAClient.extract_flr_id(flr_id_raw) or flr_id_raw or None  # Extract unique identifier
+            if not flr_id:
+                print("[map] skipping payload with no flrID")
+                return None
             return SolarFlare(
                 flr_id=flr_id,
                 begin_time=parse_time(payload["beginTime"]),

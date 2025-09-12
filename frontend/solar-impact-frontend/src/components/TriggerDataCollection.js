@@ -1,27 +1,79 @@
-import React, { useState } from 'react';
-import { getNewData } from '../services/api'; 
+import React, { useEffect, useState } from 'react';
+import { getAllSolarFlares, getNewData } from '../services/api';
 
-const TriggerDataCollection = () => {
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+// helpers
+const toISOZ = (val) => (val ? new Date(val).toISOString() : null);
+const isoForInput = (d) => {
+  const pad = (n) => (n < 10 ? `0${n}` : `${n}`);
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
+const TriggerDataCollection = ({ onAfterTrigger }) => {
+  const [startDate, setStartDate]   = useState('');
+  const [endDate, setEndDate]       = useState('');
+  const [isLoading, setIsLoading]   = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-  const [flairCount, setFlairCount] = useState(0);  // New state for tracking flare count
+  const [added, setAdded] = useState(null);
+
+  // default last 30 days
+  useEffect(() => {
+    const now = new Date();
+    const past = new Date(now.getTime() - 30*24*60*60*1000);
+    setStartDate(isoForInput(past));
+    setEndDate(isoForInput(now));
+  }, []);
+
+  
+  const countAll = async () => {
+    const rows = await getAllSolarFlares(undefined, undefined);
+    return Array.isArray(rows) ? rows.length : 0;
+  };
+
+  const pollForIncrease = async (baseline, tries = 20, delayMs = 3000) => {
+    for (let i = 0; i < tries; i++) {
+      await new Promise(r => setTimeout(r, delayMs));
+      const c = await countAll();
+      if (c > baseline) return c - baseline;
+    }
+    return 0;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setErrorMessage('');
     setSuccessMessage('');
-    
+    setAdded(null);
+
     try {
-      const result = await getNewData(startDate, endDate);
-      // Assuming the result has a count or the number of flares collected
-      setFlairCount(result.newFlareCount || 0);  // Assuming the API returns this
-      setSuccessMessage('Data collection triggered successfully');
-    } catch (error) {
-      setErrorMessage('Error triggering data collection');
+      const sd = toISOZ(startDate);
+      const ed = toISOZ(endDate);
+      if (!sd || !ed) throw new Error('Invalid dates');
+      if (new Date(sd) > new Date(ed)) throw new Error('Start must be before end');
+
+      
+      const beforeCount = await countAll();
+
+      
+      const res = await getNewData(sd, ed);
+      setSuccessMessage((res?.status || 'Data collection triggered') + ' — checking DB…');
+
+      
+      const delta = await pollForIncrease(beforeCount);
+      setAdded(delta);
+
+      if (delta > 0) {
+        setSuccessMessage(`Done — ${delta} solar flare${delta === 1 ? '' : 's'} added.`);
+      } else {
+        setSuccessMessage('Triggered — no new rows detected yet.');
+      }
+
+      if (typeof onAfterTrigger === 'function') {
+        onAfterTrigger({ startDate: sd, endDate: ed, added: delta });
+      }
+    } catch (err) {
+      setErrorMessage(err?.response?.data?.detail || err?.message || 'Error triggering data collection');
     } finally {
       setIsLoading(false);
     }
@@ -52,16 +104,16 @@ const TriggerDataCollection = () => {
           />
         </div>
         <button type="submit" disabled={isLoading}>
-          {isLoading ? 'Processing...' : 'Trigger Data Collection'}
+          {isLoading ? 'Processing…' : 'Trigger Data Collection'}
         </button>
       </form>
 
       {successMessage && (
-        <p style={{ color: 'green' }}>
-          {successMessage}. {flairCount} solar flare{flairCount === 1 ? '' : 's'} added.
+        <p style={{ color: 'green', marginTop: 8 }}>
+          {successMessage}{added != null && ` — ${added} added`}
         </p>
       )}
-      {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
+      {errorMessage && <p style={{ color: 'red', marginTop: 8 }}>{errorMessage}</p>}
     </div>
   );
 };

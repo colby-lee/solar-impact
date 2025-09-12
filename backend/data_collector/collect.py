@@ -1,13 +1,16 @@
 import json
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import threading
 
 import pika
+from sqlalchemy import func
 from apscheduler.schedulers.background import BackgroundScheduler
 from prometheus_client import start_http_server, Counter, Histogram
 
 from data_collector.clients import NASAClient
+from common import db
+from common.models.model import SolarFlare
 
 # Initialize NASA client
 client = NASAClient()
@@ -22,14 +25,28 @@ COLLECTION_DURATION = Histogram(
     'Time in seconds spent collecting and inserting solar flare data'
 )
 
+def compute_collection_range():
+    """Collect since last stored flare; if empty DB, collect the last 7 days."""
+    with db.DatabaseManager.session_scope() as session:
+        last = session.query(func.max(SolarFlare.begin_time)).scalar()
+
+    now_utc = datetime.now(timezone.utc)
+    if last:
+        start = (last + timedelta(seconds=1)).date().isoformat()   
+    else:
+        start = (now_utc - timedelta(days=7)).date().isoformat()   
+    end = now_utc.date().isoformat()
+    return start, end
+
 def collect_data_periodically():
     """
     Periodically fetch and insert solar flare data from the NASA API.
     """
     print(f"Periodic data collection triggered at {datetime.now()}")
+    sd, ed = compute_collection_range()
     start_time = time.time()
     COLLECTION_COUNTER.inc()  # Increment counter for periodic collection
-    client.fetch_and_insert_solar_flares()
+    client.fetch_and_insert_solar_flares(sd, ed)
     duration = time.time() - start_time
     COLLECTION_DURATION.observe(duration)
     
@@ -79,7 +96,12 @@ if __name__ == "__main__":
 
         # Configure the periodic task to collect data every 24 hours
         scheduler = BackgroundScheduler()
-        scheduler.add_job(collect_data_periodically, 'interval', hours=24)
+        scheduler.add_job(
+            collect_data_periodically,
+              'interval',
+                hours=24, 
+                next_run_time=datetime.now()
+                )
         scheduler.start()
 
         # Start listening to RabbitMQ for trigger messages (blocking call)

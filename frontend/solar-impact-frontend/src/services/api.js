@@ -13,6 +13,7 @@ export const getAllSolarFlares = async (startDate, endDate) => {
     return response.data;
   } catch (error) {
     console.error("Error fetching solar flares", error);
+    if (error.response?.status === 404) return [];
     throw error;
   }
 };
@@ -68,7 +69,7 @@ export const getLongestSolarFlare = async (startDate, endDate) => {
 };
 
 // Trigger new data collect if data is not current
-// Data collector will pull from NASA API and insert into databse
+// Data   will pull from NASA API and insert into databse
 export const getNewData = async (startDate, endDate) => {
   try {
     const response = await axios.post(`${API_BASE_URL}/start-data-collection`, {
