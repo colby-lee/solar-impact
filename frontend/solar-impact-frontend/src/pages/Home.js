@@ -1,6 +1,5 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import TriggerDataCollection from '../components/TriggerDataCollection'; // Import the new component
 
 const Home = () => {
   return (
