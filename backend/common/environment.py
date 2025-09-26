@@ -2,9 +2,8 @@ import os
 from dotenv import load_dotenv
 
 # Load environment variables only once
-load_dotenv()
-
-print("Environment variables loaded:", os.environ)
+if os.environ.get("DYNO") is None:  # DYNO is always set on Heroku
+    load_dotenv()
 
 
 def get_env_var(key: str, default=None) -> str:
@@ -77,10 +76,9 @@ def get_db_credentials() -> tuple[str, str]:
 def get_rabbitmq_url() -> str:
     '''Get RabbitMQ url, try for 
     CLOUDAMQP_URL (Heroku) first then local'''
-    try:
-        mqurl = get_env_var('CLOUDAMQP_URL')
-    except ValueError as e:
-        print(f'{e}: No CLOUDAMQP_URL, reverting to local')
-        mqurl = get_env_var('RABBITMQ_UR')
+    mqurl = os.environ.get("CLOUDAMQP_URL")
+    if mqurl:
+        return mqurl
+    return os.environ.get("RABBITMQ_URL", "amqp://guest:guest@localhost:5672//")
     
     return mqurl
