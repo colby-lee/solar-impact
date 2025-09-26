@@ -3,7 +3,7 @@ from datetime import datetime
 
 import pika
 
-import environment as env
+import common.environment as env
 
 
 def parse_time(time_str: str) -> datetime:
