@@ -42,6 +42,7 @@ deploy-heroku:
 # Start Heroku App
 start-heroku:
 	heroku ps:scale web=1 -a $(APP_NAME) || true
+	heroku ps:scale worker=1 -a solar-impact-api
 	heroku addons:create heroku-postgresql:essential-0 -a $(APP_NAME) --wait || true
 	heroku addons:create cloudamqp:lemur -a $(APP_NAME) --wait || true
 	make push-env
@@ -49,6 +50,7 @@ start-heroku:
 # Stop Heroku App
 stop-heroku:
 	heroku ps:scale web=0 -a $(APP_NAME) || true
+	heroku ps:scale worker=0 -a solar-impact-api
 	heroku addons:destroy heroku-postgresql -a $(APP_NAME) --confirm $(APP_NAME) || true
 	heroku addons:destroy cloudamqp -a $(APP_NAME) --confirm $(APP_NAME) || true
 
