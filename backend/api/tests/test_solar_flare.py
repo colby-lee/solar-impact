@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 from unittest.mock import MagicMock, patch
-from api.main import app  # The FastAPI app instance
-from common.models.model import SolarFlare  # The model we are working with
+from api.main import app  
+from common.models.model import SolarFlare  
 
 client = TestClient(app)
 
@@ -30,7 +30,7 @@ mock_flare_2.to_dict.return_value = {
     "linked_events": {},
 }
 
-# Test case for GET /api/solar-flares - Fetch all solar flares
+
 def test_get_all_solar_flares():
     # Patch just the query method of the session to return mock data
     with patch("api.endpoints.solar_flare.DatabaseManager.session_scope") as mock_session_scope:
@@ -40,7 +40,6 @@ def test_get_all_solar_flares():
         mock_session.query.return_value = mock_query
         mock_session_scope.return_value.__enter__.return_value = mock_session
         
-        # Perform the GET request
         response = client.get("/api/solar-flares")
 
     # Debugging output
@@ -55,7 +54,7 @@ def test_get_all_solar_flares():
     ]
 
 
-# Test case for GET /api/solar-flares/{flr_id} - Fetch a single solar flare by ID (found)
+
 def test_get_solar_flare_found():
     # Patch just the query method of the session to return mock data
     with patch("api.endpoints.solar_flare.DatabaseManager.session_scope") as mock_session_scope:
@@ -65,16 +64,12 @@ def test_get_solar_flare_found():
         mock_session.query.return_value = mock_query
         mock_session_scope.return_value.__enter__.return_value = mock_session
         
-        # Perform the GET request
         response = client.get("/api/solar-flares/FLR-001")
-
-
-    # Assertions for a valid flare
+    
     assert response.status_code == 200
     assert response.json() == mock_flare_1.to_dict.return_value
 
 
-# Test case for GET /api/solar-flares/{flr_id} - Fetch a single solar flare by ID (not found)
 def test_get_solar_flare_not_found():
     # Patch just the query method of the session to simulate not finding the flare
     with patch("api.endpoints.solar_flare.DatabaseManager.session_scope") as mock_session_scope:
@@ -84,10 +79,7 @@ def test_get_solar_flare_not_found():
         mock_session.query.return_value = mock_query
         mock_session_scope.return_value.__enter__.return_value = mock_session
         
-        # Perform the GET request
         response = client.get("/api/solar-flares/FLR-999")
 
-
-    # Assertions for 404 error (not found)
     assert response.status_code == 404
     assert response.json()["detail"] == "Solar flare not found"

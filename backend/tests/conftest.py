@@ -8,6 +8,11 @@ from common.models.model import Base
 import common.db as db  # module that defines DatabaseManager
 
 
+'''
+NOTE: Using SQLite for integration tests, standing up postgres is a little much for running tests, behavior is nearly identical
+'''
+
+
 @pytest.fixture(scope="session")
 def test_engine():
     
@@ -45,11 +50,8 @@ def override_db(monkeypatch, db_session):
             except Exception:
                 db_session.rollback()
                 raise
-
     
     monkeypatch.setattr(db, "DatabaseManager", TestDatabaseManager, raising=False)
-
-    
     monkeypatch.setattr("api.endpoints.solar_flare.DatabaseManager", TestDatabaseManager, raising=False)
     monkeypatch.setattr("api.endpoints.analysis.DatabaseManager",    TestDatabaseManager, raising=False)
 
@@ -74,7 +76,6 @@ def client(override_db):
     importlib.reload(main_module)
     from fastapi.testclient import TestClient
     return TestClient(main_module.app)
-
 
 
 @pytest.fixture(autouse=True)

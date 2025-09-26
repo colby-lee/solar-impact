@@ -29,3 +29,44 @@ run-tests:
 # Run api tests
 run-api-tests:
 	(VENV_DIR)/bin/pytest api/tests -v
+
+
+################################# Heroku setup ########################################
+APP_NAME = solar-impact-api
+REPO_ROOT = $(abspath $(dir $(MAKEFILE_LIST))..)
+
+# Deploy
+deploy-heroku:
+	cd $(REPO_ROOT) && heroku buildpacks:set heroku/python -a solar-impact-api
+	cd $(REPO_ROOT) && git subtree push --prefix backend heroku master
+
+# Start Heroku App
+start-heroku:
+	heroku ps:scale web=1 -a $(APP_NAME) || true
+	heroku addons:create heroku-postgresql:essential-0 -a $(APP_NAME) --wait || true
+	heroku addons:create cloudamqp:lemur -a $(APP_NAME) --wait || true
+	make push-env
+
+# Stop Heroku App
+stop-heroku:
+	heroku ps:scale web=0 -a $(APP_NAME) || true
+	heroku addons:destroy heroku-postgresql -a $(APP_NAME) --confirm $(APP_NAME) || true
+	heroku addons:destroy cloudamqp -a $(APP_NAME) --confirm $(APP_NAME) || true
+
+
+
+# Push local .env to Heroku 
+push-env:
+	@if [ -f ./.env ]; then \
+		export $$(cat ../.env | xargs) && \
+		heroku config:set \
+		NASA_API_KEY=$$NASA_API_KEY \
+		-a $(APP_NAME); \
+	else \
+		echo ".env file not found in project root"; \
+	fi
+
+# Show current config
+show-config:
+	heroku config -a $(APP_NAME)
+

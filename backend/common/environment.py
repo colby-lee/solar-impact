@@ -24,6 +24,38 @@ def get_nasa_api_key() -> str:
     return get_env_var('NASA_API_KEY')
 
 
+def get_database_url() -> str:
+    """
+    Prefer DATABASE_URL (Heroku). 
+    Fall back to local POSTGRES_USER + POSTGRES_PASSWORD if not set.
+    """
+    db_url = os.environ.get("DATABASE_URL")
+    if db_url:
+        # Heroku DATABASE_URL can be postgres:// instead of postgresql://
+        return db_url.replace("postgres://", "postgresql://", 1)
+
+    # Local fallback
+    user = get_db_user()
+    password = get_db_password()
+    host = get_db_host()
+    port = get_db_port()
+    dbname = get_db_name()
+
+    return f"postgresql://{user}:{password}@{host}:{port}/{dbname}"
+
+
+def get_db_host() -> str:
+    return get_env_var('POSTGRES_HOST', 'localhost')
+
+
+def get_db_port() -> int:
+    return int(get_env_var('POSTGRES_PORT', 5432))
+
+
+def get_db_name() -> str:
+    return get_env_var('POSTGRES_DB', 'solarflare')
+
+
 def get_db_password() -> str:
     """Fetch database password."""
     return get_env_var('POSTGRES_PASSWORD')
@@ -40,3 +72,15 @@ def get_db_credentials() -> tuple[str, str]:
     Returns them as a tuple (username, password).
     """
     return get_db_user(), get_db_password()
+
+
+def get_rabbitmq_url() -> str:
+    '''Get RabbitMQ url, try for 
+    CLOUDAMQP_URL (Heroku) first then local'''
+    try:
+        mqurl = get_env_var('CLOUDAMQP_URL')
+    except ValueError as e:
+        print(f'{e}: No CLOUDAMQP_URL, reverting to local')
+        mqurl = get_env_var('RABBITMQ_UR')
+    
+    return mqurl

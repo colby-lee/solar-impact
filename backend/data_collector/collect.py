@@ -9,7 +9,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from prometheus_client import start_http_server, Counter, Histogram
 
 from data_collector.clients import NASAClient
-from common import db
+from common import db, environment as env
 from common.models.model import SolarFlare
 
 # Initialize NASA client
@@ -70,7 +70,7 @@ def start_listening():
     Start listening to the RabbitMQ queue for incoming messages.
     This listens for trigger messages from the FastAPI backend.
     """
-    connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
+    connection = pika.BlockingConnection(pika.ConnectionParameters(host=env.get_rabbitmq_url()))
     channel = connection.channel()
 
     # Ensure the queue exists
@@ -92,6 +92,7 @@ def start_prometheus_server():
 if __name__ == "__main__":
     try:
         # Start Prometheus metrics server in a background thread
+        # This may need to be removed in production
         threading.Thread(target=start_prometheus_server, daemon=True).start()
 
         # Configure the periodic task to collect data every 24 hours

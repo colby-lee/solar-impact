@@ -3,7 +3,7 @@ from contextlib import contextmanager
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from common.models.model import Base
-from common.environment import get_db_credentials
+import common.environment as env
 
 
 class DatabaseManager:
@@ -17,14 +17,17 @@ class DatabaseManager:
     @classmethod
     def create_database(cls):
         """Check if the database exists; if not, create it."""
-        user, password = get_db_credentials()
+        user, password = env.get_db_credentials()
+        host = env.get_db_host()
+        port = env.get_db_port()
+        name = env.get_db_name()
         
         connection_params = {
             "dbname": "postgres",  # Always connect to the default database
             "user": user,
             "password": password,
-            "host": "localhost",
-            "port": 5432,
+            "host": host,
+            "port": port,
         }
 
         try:
@@ -34,7 +37,7 @@ class DatabaseManager:
             cursor = conn.cursor()
 
             # Check if database already exists
-            cursor.execute("SELECT 1 FROM pg_database WHERE datname = 'solarflare'")
+            cursor.execute(f"SELECT 1 FROM pg_database WHERE datname = '{name}'")
             if not cursor.fetchone():
                 print("Database 'solarflare' does not exist. Creating...")
                 cursor.execute("CREATE DATABASE solarflare;")
@@ -52,14 +55,13 @@ class DatabaseManager:
     def get_engine(cls):
         """Lazy initialize the engine."""
         if cls._engine is None:
-            # make sure database exists
-            cls.create_database()
+            db_url = get_database_url()
 
-            user, password = get_db_credentials()
-            db_url = f"postgresql://{user}:{password}@localhost:5432/solarflare"
+            # Only try to auto-create DB if using local credentials, not DATABASE_URL
+            if "localhost" in db_url or "127.0.0.1" in db_url:
+                cls.create_database()
+
             cls._engine = create_engine(db_url, echo=True)
-
-            # Ensure the sessionmaker is created here
             cls._SessionLocal = sessionmaker(bind=cls._engine)
             cls.initialize_database()
         return cls._engine
