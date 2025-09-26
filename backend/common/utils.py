@@ -3,6 +3,8 @@ from datetime import datetime
 
 import pika
 
+import environment as env
+
 
 def parse_time(time_str: str) -> datetime:
     """
@@ -24,7 +26,7 @@ def send_rabbitmq_message(queue_name: str, message: dict):
     """
     try:
         # Establish connection to RabbitMQ server
-        connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost')) 
+        connection = pika.BlockingConnection(pika.URLParameters(env.get_rabbitmq_url())) 
         channel = connection.channel()
 
         # Ensure the queue exists
