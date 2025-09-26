@@ -70,7 +70,7 @@ def start_listening():
     Start listening to the RabbitMQ queue for incoming messages.
     This listens for trigger messages from the FastAPI backend.
     """
-    connection = pika.BlockingConnection(pika.URLParameters(host=env.get_rabbitmq_url()))
+    connection = pika.BlockingConnection(pika.URLParameters(env.get_rabbitmq_url()))
     channel = connection.channel()
 
     # Ensure the queue exists
