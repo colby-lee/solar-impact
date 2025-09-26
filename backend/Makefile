@@ -37,7 +37,6 @@ REPO_ROOT = $(abspath $(dir $(MAKEFILE_LIST))..)
 
 # Deploy
 deploy-heroku:
-	cd $(REPO_ROOT) && heroku buildpacks:set heroku/python -a solar-impact-api
 	cd $(REPO_ROOT) && git subtree push --prefix backend heroku master
 
 # Start Heroku App

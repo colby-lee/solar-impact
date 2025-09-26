@@ -55,7 +55,7 @@ class DatabaseManager:
     def get_engine(cls):
         """Lazy initialize the engine."""
         if cls._engine is None:
-            db_url = get_database_url()
+            db_url = env.get_database_url()
 
             # Only try to auto-create DB if using local credentials, not DATABASE_URL
             if "localhost" in db_url or "127.0.0.1" in db_url:
