@@ -1,8 +1,9 @@
 import os
 from dotenv import load_dotenv
 
-# Load environment variables only once
-if os.environ.get("DYNO") is None:  # DYNO is always set on Heroku
+# Load environment variables only once if deployed locally, 
+# otherwise heroku is set through other means
+if os.environ.get("DYNO") is None:  
     load_dotenv()
 
 
@@ -80,5 +81,3 @@ def get_rabbitmq_url() -> str:
     if mqurl:
         return mqurl
     return os.environ.get("RABBITMQ_URL", "amqp://guest:guest@localhost:5672//")
-    
-    return mqurl
