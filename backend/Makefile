@@ -56,9 +56,12 @@ stop-heroku:
 
 heroku-down:
 	heroku ps:scale web=0 worker=0 -a solar-impact-api
+	heroku ps:scale web=0 -a solar-impact-frontend
+
 
 heroku-up:
 	heroku	ps:scale web=1 worker=1 -a solar-impact-api
+	heroku ps:scale web=1 -a solar-impact-frontend
 
 
 # Push local .env to Heroku 
