@@ -1,6 +1,7 @@
 import os
 import json
 import time
+import base64
 from datetime import datetime, timedelta, timezone
 
 import pika
