@@ -54,6 +54,11 @@ stop-heroku:
 	heroku addons:destroy heroku-postgresql -a $(APP_NAME) --confirm $(APP_NAME) || true
 	heroku addons:destroy cloudamqp -a $(APP_NAME) --confirm $(APP_NAME) || true
 
+heroku-down:
+	heroku ps:scale web=0 worker=0 -a solar-impact-api
+
+heroku-up:
+	heroku	ps:scale web=1 worker=1 -a solar-impact-api
 
 
 # Push local .env to Heroku 
