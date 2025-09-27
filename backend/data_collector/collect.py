@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 import pika
 from sqlalchemy import func
 from apscheduler.schedulers.background import BackgroundScheduler
-from prometheus_client import Counter, Histogram, CollectorRegistry, push_to_gateway
+from prometheus_client import Counter, Histogram, CollectorRegistry
 
 from data_collector.clients import NASAClient
 from common import db, environment as env
@@ -57,7 +57,6 @@ def collect_data_periodically():
 
     duration = time.time() - start_time
     COLLECTION_DURATION.observe(duration)
-    push_metrics("periodic-collection")
 
 
 def callback(ch, method, properties, body):
@@ -73,7 +72,6 @@ def callback(ch, method, properties, body):
 
     duration = time.time() - start_time
     COLLECTION_DURATION.observe(duration)
-    push_metrics("immediate-collection")
 
 
 def start_listening():
@@ -86,34 +84,6 @@ def start_listening():
 
     print('Listening for messages to trigger data collection...')
     channel.start_consuming()
-
-
-def push_metrics(job='solar-impact-collector'):
-    """Push Prometheus metrics to Grafana Cloud."""
-    url = os.getenv('GRAFANA_REMOTE_WRITE_URL')
-    username = os.getenv('GRAFANA_USERNAME')
-    password = os.getenv('GRAFANA_PASSWORD')
-
-    if not url or not username or not password:
-        print("Grafana Cloud config missing, skipping push")
-        return
-    
-     # Encode username:password into Basic Auth header
-    auth_string = f"{username}:{password}"
-    auth_header = base64.b64encode(auth_string.encode("utf-8")).decode("utf-8")
-
-    try:
-        push_to_gateway(
-        url,
-        job=job,
-        registry=registry,
-        handler=lambda u, m, t, h, d: (
-            u, m, t, {**h, "Authorization": f"Basic {auth_header}"}, d
-            )
-        )
-        print("Metrics pushed to Grafana Cloud")
-    except Exception as e:
-        print(f'Error pushing metrics: {e}')
 
 
 if __name__ == "__main__":
@@ -131,6 +101,7 @@ if __name__ == "__main__":
 
         while True:
             time.sleep(60)
+
     except (KeyboardInterrupt, SystemExit):
         print("Shutting down gracefully...")
         scheduler.shutdown()
