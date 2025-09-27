@@ -97,13 +97,19 @@ def push_metrics(job='solar-impact-collector'):
     if not url or not username or not password:
         print("Grafana Cloud config missing, skipping push")
         return
+    
+     # Encode username:password into Basic Auth header
+    auth_string = f"{username}:{password}"
+    auth_header = base64.b64encode(auth_string.encode("utf-8")).decode("utf-8")
 
     try:
         push_to_gateway(
-            url,
-            job=job,
-            registry=registry,
-            auth=(username, password)
+        url,
+        job=job,
+        registry=registry,
+        handler=lambda u, m, t, h, d: (
+            u, m, t, {**h, "Authorization": f"Basic {auth_header}"}, d
+            )
         )
         print("Metrics pushed to Grafana Cloud")
     except Exception as e:
