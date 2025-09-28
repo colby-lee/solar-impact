@@ -1,5 +1,5 @@
 # .github/workflows/backend-ci.yml
-name: Backend CI
+name: Backend CI/CD
 
 on:
   push:
@@ -42,4 +42,17 @@ jobs:
 
       - name: Run tests
         run: pytest -q
+
+  deploy:
+    needs: test   # only run if tests pass
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy Backend to Heroku
+        run: |
+          git subtree split --prefix backend -b backend-deploy
+          git push https://heroku:${{ secrets.HEROKU_API_KEY }}@git.heroku.com/solar-impact-api.git backend-deploy:master --force
+          git branch -D backend-deploy
+
 

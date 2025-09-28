@@ -1,5 +1,5 @@
-# .github/workflows/frontend-ci.yml
-name: Frontend CI
+# when pushed to github, build, run tests, and deploy to heroku
+name: Frontend CI/CD
 
 on:
   push:
@@ -35,4 +35,17 @@ jobs:
 
       - name: Build (ensures the app compiles)
         run: npm run build
+
+  deploy:
+    needs: build-and-test   # only deploy if build succeeds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy Frontend to Heroku
+        run: |
+          git subtree split --prefix frontend -b frontend-deploy
+          git push https://heroku:${{ secrets.HEROKU_API_KEY }}@git.heroku.com/solar-impact-frontend.git frontend-deploy:master --force
+          git branch -D frontend-deploy
+
 
